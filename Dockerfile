@@ -1,38 +1,41 @@
-FROM php:8.2-fpm
+FROM php:8.3-fpm
 
-# Install system dependencies
+# Diretório da aplicação
+WORKDIR /var/www
+
+# Dependências do sistema
 RUN apt-get update && apt-get install -y \
     git \
     curl \
+    zip \
+    unzip \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
+    libzip-dev
+
+# Extensões PHP necessárias para Laravel
+RUN docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
     zip \
-    unzip \
-    nodejs \
-    npm
+    xml
 
-# Clear cache
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# Instalar Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+# Copiar arquivos
+COPY . .
 
-# Get latest Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Permissões
+RUN mkdir -p storage bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
-# Set working directory
-WORKDIR /var/www/src
-
-# Copy existing application directory contents
-COPY . /var/www/src
-
-# Install PHP dependencies
-RUN composer install
-
-# Copy existing application directory permissions
-RUN chown -R www-data:www-data /var/www/src
-
-# Expose port 9000 and start php-fpm server
 EXPOSE 9000
+
 CMD ["php-fpm"]

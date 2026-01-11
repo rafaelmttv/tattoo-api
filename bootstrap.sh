@@ -7,8 +7,18 @@ if [ ! -f .env ]; then
   cp .env.example .env
 fi
 
+# Install composer dependencies
+composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# Update composer dependencies
+composer update
+
 # Generate application key if not set
 php artisan key:generate
+
+# Set permissions for storage and cache directories
+chown -R www-data:www-data storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
 
 # Run database migrations
 php artisan migrate
