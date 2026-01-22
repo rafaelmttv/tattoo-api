@@ -51,7 +51,7 @@ Designed to be consumed by **web frontends and mobile applications**, with full 
 ### 1️⃣ Clone the repository
 
 ```bash
-git clone https://github.com/your-org/tattoo-api.git
+git clone git@github.com:rafaelmttv/tattoo-api.git
 cd tattoo-api
 ```
 
