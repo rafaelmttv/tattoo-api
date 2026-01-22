@@ -79,12 +79,13 @@ The bootstrap script prepares the local environment:
 - Generates `APP_KEY` if missing
 - Runs database migrations
 - Optionally seeds the database
+- Clear caches
 
 ```bash
 docker compose exec app ./bootstrap.sh
 ```
 
-#### Optional: Seed database
+#### Optional: Migrate and seed database
 
 ```bash
 docker compose exec -e SEED_DB=true app ./bootstrap.sh

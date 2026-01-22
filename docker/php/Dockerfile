@@ -44,8 +44,11 @@ RUN pecl install xdebug \
 COPY docker/php/php.dev.ini /usr/local/etc/php/php.ini
 
 # 🔑 CRIA STORAGE E CACHE COM PERMISSÕES CORRETAS
-RUN mkdir -p storage/logs \
-    storage/framework/{cache,sessions,views} \
+RUN mkdir -p \
+    storage/logs \
+    storage/framework/cache \
+    storage/framework/sessions \
+    storage/framework/views \
     bootstrap/cache \
  && chown -R appuser:appgroup storage bootstrap/cache \
  && chmod -R 775 storage bootstrap/cache
