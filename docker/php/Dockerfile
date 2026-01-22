@@ -5,6 +5,7 @@ FROM php:8.3-fpm-alpine AS base
 
 WORKDIR /var/www
 
+# Dependências do sistema
 RUN apk add --no-cache \
     bash \
     git \
@@ -22,7 +23,17 @@ RUN apk add --no-cache \
     bcmath \
     opcache
 
+# Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# =========================
+# UID/GID align (DEV)
+# =========================
+ARG UID=1000
+ARG GID=1000
+
+RUN addgroup -g ${GID} appgroup \
+ && adduser -D -u ${UID} -G appgroup appuser
 
 # =========================
 # DEV
@@ -34,10 +45,11 @@ RUN pecl install xdebug \
 
 COPY docker/php/php.dev.ini /usr/local/etc/php/php.ini
 
+USER appuser
 CMD ["php-fpm"]
 
 # =========================
-# PROD
+# PROD (não altera para DEV/WLS)
 # =========================
 FROM base AS prod
 
@@ -45,18 +57,10 @@ COPY docker/php/php.prod.ini /usr/local/etc/php/php.ini
 
 COPY . .
 
-RUN composer install \
-    --no-dev \
-    --optimize-autoloader \
-    --no-interaction \
-    --no-progress
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
 RUN chown -R www-data:www-data storage bootstrap/cache \
  && chmod -R 775 storage bootstrap/cache
 
-RUN php artisan key:generate --force \
- && php artisan config:clear \
- && php artisan route:clear \
- && php artisan view:clear
-
+USER www-data
 CMD ["php-fpm"]
