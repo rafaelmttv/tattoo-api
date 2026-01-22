@@ -1,0 +1,358 @@
+openapi: 3.0.0
+
+info:
+  title: Tattoo API
+  version: 1.0.0
+  description: Official public API for Tattoo platform (Web & Mobile)
+
+servers:
+  - url: http://localhost:8080/api
+    description: Local
+  - url: https://api.tattooapp.com/api
+    description: Production
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Roles
+  - name: Artworks
+  - name: Artist Services
+  - name: Studio Services
+  - name: Studios
+  - name: Tattoo Artists
+  - name: Customers
+  - name: Contacts
+
+paths:
+
+  # ======================================================
+  # AUTH
+  # ======================================================
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201': { $ref: '#/components/responses/AuthSuccess' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200': { $ref: '#/components/responses/AuthSuccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh token
+      responses:
+        '200': { $ref: '#/components/responses/TokenRefresh' }
+
+  /user:
+    get:
+      tags: [Users]
+      summary: Authenticated user
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ======================================================
+  # GENERIC PAGINATED CRUD TEMPLATE APPLIED
+  # ======================================================
+
+  /customers:
+    get:
+      tags: [Customers]
+      summary: List customers
+      responses:
+        '200': { $ref: '#/components/responses/PaginatedCustomer' }
+    post:
+      tags: [Customers]
+      summary: Create customer
+      responses:
+        '201': { $ref: '#/components/responses/CustomerResponse' }
+
+  /customers/{id}:
+    get:
+      tags: [Customers]
+      summary: Get customer
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/CustomerResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Customers]
+      summary: Update customer
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/CustomerResponse' }
+    delete:
+      tags: [Customers]
+      summary: Delete customer
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '204': { description: Deleted }
+
+  /tattoo-artists:
+    get:
+      tags: [Tattoo Artists]
+      summary: List tattoo artists
+      responses:
+        '200': { $ref: '#/components/responses/PaginatedTattooArtist' }
+    post:
+      tags: [Tattoo Artists]
+      summary: Create tattoo artist
+      responses:
+        '201': { $ref: '#/components/responses/TattooArtistResponse' }
+
+  /tattoo-artists/{id}:
+    get:
+      tags: [Tattoo Artists]
+      summary: Get tattoo artist
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/TattooArtistResponse' }
+    patch:
+      tags: [Tattoo Artists]
+      summary: Update tattoo artist
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/TattooArtistResponse' }
+    delete:
+      tags: [Tattoo Artists]
+      summary: Delete tattoo artist
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '204': { description: Deleted }
+
+  /studios:
+    get:
+      tags: [Studios]
+      summary: List studios
+      responses:
+        '200': { $ref: '#/components/responses/PaginatedStudio' }
+    post:
+      tags: [Studios]
+      summary: Create studio
+      responses:
+        '201': { $ref: '#/components/responses/StudioResponse' }
+
+  /studios/{id}:
+    get:
+      tags: [Studios]
+      summary: Get studio
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/StudioResponse' }
+    patch:
+      tags: [Studios]
+      summary: Update studio
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/StudioResponse' }
+    delete:
+      tags: [Studios]
+      summary: Delete studio
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '204': { description: Deleted }
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+
+    AuthSuccess:
+      description: Auth success
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AuthResponse' }
+
+    TokenRefresh:
+      description: Token refreshed
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              token: { type: string }
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          example: { message: Unauthenticated. }
+
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          example: { message: Resource not found }
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          example:
+            message: Invalid data
+            errors: { field: [Error message] }
+
+    PaginatedCustomer:
+      description: Paginated customers
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PaginatedCustomer'
+
+    CustomerResponse:
+      description: Customer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Customer'
+
+    PaginatedTattooArtist:
+      description: Paginated tattoo artists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PaginatedTattooArtist'
+
+    TattooArtistResponse:
+      description: Tattoo artist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TattooArtist'
+
+    PaginatedStudio:
+      description: Paginated studios
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PaginatedStudio'
+
+    StudioResponse:
+      description: Studio
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Studio'
+
+  schemas:
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        last_page: { type: integer }
+
+    PaginatedCustomer:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Customer' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+    PaginatedTattooArtist:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/TattooArtist' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+    PaginatedStudio:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Studio' }
+        meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password, password_confirmation]
+      properties:
+        name: { type: string }
+        email: { type: string }
+        password: { type: string }
+        password_confirmation: { type: string }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string }
+
+    AuthResponse:
+      type: object
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        token: { type: string }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+
+    Customer:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        phone: { type: string }
+
+    TattooArtist:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        bio: { type: string }
+
+    Studio:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        address: { type: string }
+
+security:
+  - bearerAuth: []
