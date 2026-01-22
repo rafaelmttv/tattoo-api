@@ -1,5 +1,5 @@
 # =========================
-# Base PHP
+# Base
 # =========================
 FROM php:8.3-fpm-alpine AS base
 
@@ -24,9 +24,9 @@ RUN apk add --no-cache \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# =========================
-# DEV user
-# =========================
+###################################
+# UID/GID alinhado com host (DEV)
+###################################
 ARG UID=1000
 ARG GID=1000
 
@@ -42,6 +42,13 @@ RUN pecl install xdebug \
  && docker-php-ext-enable xdebug
 
 COPY docker/php/php.dev.ini /usr/local/etc/php/php.ini
+
+# 🔑 CRIA STORAGE E CACHE COM PERMISSÕES CORRETAS
+RUN mkdir -p storage/logs \
+    storage/framework/{cache,sessions,views} \
+    bootstrap/cache \
+ && chown -R appuser:appgroup storage bootstrap/cache \
+ && chmod -R 775 storage bootstrap/cache
 
 USER appuser
 
@@ -61,7 +68,10 @@ RUN composer install \
     --no-interaction \
     --no-progress
 
-RUN chown -R www-data:www-data storage bootstrap/cache \
+RUN mkdir -p storage/logs \
+    storage/framework/{cache,sessions,views} \
+    bootstrap/cache \
+ && chown -R www-data:www-data storage bootstrap/cache \
  && chmod -R 775 storage bootstrap/cache
 
 USER www-data
