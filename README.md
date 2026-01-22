@@ -85,7 +85,7 @@ The bootstrap script prepares the local environment:
 docker compose exec app ./bootstrap.sh
 ```
 
-#### Optional: Migrate and seed database
+#### Optional: Migrate WITH seed database
 
 ```bash
 docker compose exec -e SEED_DB=true app ./bootstrap.sh

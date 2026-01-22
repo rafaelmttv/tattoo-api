@@ -41,7 +41,7 @@ chmod -R 775 storage bootstrap/cache || true
 # Migrations & Seeds
 #####################################
 echo "🗄️ Running migrations"
-php artisan migrate --force
+php artisan migrate:fresh --force
 
 # Optional seeding
 if [ "$SEED_DB" = "true" ]; then
