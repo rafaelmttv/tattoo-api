@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   app:
     build:
@@ -10,8 +8,8 @@ services:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
     volumes:
-      - .:/var/www:cached
-      - storage_data:/var/www/storage
+      - .:/var/www:cached                 # apenas código fonte
+      - storage_data:/var/www/storage     # storage isolado
       - cache_data:/var/www/bootstrap/cache
     environment:
       APP_ENV: local
