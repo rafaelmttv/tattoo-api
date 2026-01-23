@@ -7,6 +7,6 @@ mkdir -p storage/logs \
          bootstrap/cache
 
 chown -R appuser:appgroup storage bootstrap/cache
-chmod -R 775 storage bootstrap/cache
+chmod -R ug+rwX storage bootstrap/cache
 
 exec "$@"

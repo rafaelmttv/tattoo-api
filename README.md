@@ -163,6 +163,9 @@ docker compose -f docker-compose.prod.yml up -d --build
 ## 🧪 Useful Commands
 
 ```bash
+# Subir o projeto
+docker compose up -d
+
 # List routes
 docker compose exec app php artisan route:list
 

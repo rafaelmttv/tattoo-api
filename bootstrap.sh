@@ -24,7 +24,7 @@ fi
 #####################################
 # Application key
 #####################################
-if ! php artisan key:generate --show > /dev/null 2>&1; then
+if ! grep -q "^APP_KEY=base64:" .env; then
   echo "🔑 Generating APP_KEY"
   php artisan key:generate --force
 else

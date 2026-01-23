@@ -33,7 +33,7 @@ ARG UID=1000
 ARG GID=1000
 
 RUN addgroup -g ${GID} appgroup \
- && adduser -D -u ${UID} -G appgroup appuser
+ && adduser -D -u ${UID} -G appgroup -s /bin/sh appuser
 
 # =========================
 # DEV
