@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Artwork extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'creator_id',
@@ -15,6 +16,8 @@ class Artwork extends Model
         'description',
         'image_url',
         'body_location',
+        'style',
+        'tags',
         'price',
         'active',
     ];
@@ -22,6 +25,7 @@ class Artwork extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'active' => 'boolean',
+        'tags' => 'array',
     ];
 
     public function creator()

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\RoleEnum;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -9,13 +10,11 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
-        $roles = [
-            ['name' => 'Admin'],
-            ['name' => 'Customer'],
-            ['name' => 'TattooArtist'],
-            ['name' => 'Studio'],
-        ];
+        $roles = array_map(
+            fn (RoleEnum $role) => ['name' => $role->value],
+            RoleEnum::cases()
+        );
 
-        DB::table('roles')->insert($roles);
+        DB::table('roles')->insertOrIgnore($roles);
     }
 }
