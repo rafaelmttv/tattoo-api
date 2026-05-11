@@ -4,12 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TattooArtist extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
-    protected $fillable = ['user_id', 'bio', 'experience_years'];
+    protected $fillable = [
+        'user_id',
+        'slug',
+        'bio',
+        'experience_years',
+        'specialties',
+        'avatar_url',
+    ];
+
+    protected $casts = [
+        'specialties' => 'array',
+        'experience_years' => 'integer',
+    ];
 
     public function user()
     {
