@@ -2,58 +2,69 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ArtistService;
+use App\Http\Requests\StoreArtistServiceRequest;
+use App\Http\Requests\UpdateArtistServiceRequest;
+use App\Http\Resources\ArtistServiceResource;
+use App\Services\ArtistServiceService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ArtistServiceController extends Controller
 {
-    public function index()
+    use ApiResponse;
+
+    public function __construct(
+        private readonly ArtistServiceService $artistServiceService
+    ) {}
+
+    /**
+     * List active artist services with pagination.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return ArtistService::with('provider.user')->where('active', true)->get();
+        $services = $this->artistServiceService->list(
+            perPage: $request->integer('per_page', 15)
+        );
+
+        return ArtistServiceResource::collection($services);
     }
 
-    public function show($id)
+    /**
+     * Show a single artist service.
+     */
+    public function show(int $id): ArtistServiceResource
     {
-        return ArtistService::with('provider.user')->findOrFail($id);
+        $service = $this->artistServiceService->find($id);
+
+        return new ArtistServiceResource($service);
     }
 
-    public function store(Request $request)
+    /**
+     * Create a new artist service.
+     */
+    public function store(StoreArtistServiceRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'duration' => 'nullable|integer|min:0',
-            'active' => 'boolean',
-        ]);
+        $service = $this->artistServiceService->create(
+            $request->user()->tattooArtist,
+            $request->validated()
+        );
 
-        $service = ArtistService::create([
-            'provider_id' => Auth::user()->tattooArtist->id,
-            'name' => $request->name,
-            'description' => $request->description,
-            'price' => $request->price,
-            'duration' => $request->duration,
-            'active' => $request->active ?? true,
-        ]);
-
-        return response()->json($service, 201);
+        return $this->createdResponse(new ArtistServiceResource($service));
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Update an existing artist service.
+     */
+    public function update(UpdateArtistServiceRequest $request, int $id): ArtistServiceResource
     {
-        $service = ArtistService::where('provider_id', Auth::user()->tattooArtist->id)->findOrFail($id);
+        $service = $this->artistServiceService->find($id);
 
-        $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'sometimes|required|numeric|min:0',
-            'duration' => 'nullable|integer|min:0',
-            'active' => 'boolean',
-        ]);
+        $this->authorize('update', $service);
 
-        $service->update($request->only(['name', 'description', 'price', 'duration', 'active']));
+        $service = $this->artistServiceService->update($service, $request->validated());
 
-        return response()->json($service);
+        return new ArtistServiceResource($service);
     }
 }

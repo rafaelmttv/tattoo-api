@@ -2,67 +2,70 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Artwork;
+use App\Http\Requests\StoreArtworkRequest;
+use App\Http\Requests\UpdateArtworkRequest;
+use App\Http\Resources\ArtworkResource;
+use App\Services\ArtworkService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ArtworkController extends Controller
 {
-    public function index(Request $request)
+    use ApiResponse;
+
+    public function __construct(
+        private readonly ArtworkService $artworkService
+    ) {}
+
+    /**
+     * List active artworks with optional filters and pagination.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Artwork::with('creator.user')->where('active', true);
+        $artworks = $this->artworkService->list(
+            filters: $request->only(['body_location', 'creator_id']),
+            perPage: $request->integer('per_page', 15)
+        );
 
-        if ($request->has('body_location')) {
-            $query->where('body_location', $request->body_location);
-        }
-
-        return $query->paginate(10);
+        return ArtworkResource::collection($artworks);
     }
 
-    public function show($id)
+    /**
+     * Show a single artwork.
+     */
+    public function show(int $id): ArtworkResource
     {
-        return Artwork::with('creator.user')->findOrFail($id);
+        $artwork = $this->artworkService->find($id);
+
+        return new ArtworkResource($artwork);
     }
 
-    public function store(Request $request)
+    /**
+     * Create a new artwork.
+     */
+    public function store(StoreArtworkRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'image_url' => 'nullable|url',
-            'body_location' => 'nullable|string',
-            'price' => 'nullable|numeric|min:0',
-            'active' => 'boolean',
-        ]);
+        $artwork = $this->artworkService->create(
+            $request->user()->tattooArtist,
+            $request->validated()
+        );
 
-        $artwork = Artwork::create([
-            'creator_id' => Auth::user()->tattooArtist->id,
-            'name' => $request->name,
-            'description' => $request->description,
-            'image_url' => $request->image_url,
-            'body_location' => $request->body_location,
-            'price' => $request->price,
-            'active' => $request->active ?? true,
-        ]);
-
-        return response()->json($artwork, 201);
+        return $this->createdResponse(new ArtworkResource($artwork));
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Update an existing artwork.
+     */
+    public function update(UpdateArtworkRequest $request, int $id): ArtworkResource
     {
-        $artwork = Artwork::where('creator_id', Auth::user()->tattooArtist->id)->findOrFail($id);
+        $artwork = $this->artworkService->find($id);
 
-        $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'image_url' => 'nullable|url',
-            'body_location' => 'nullable|string',
-            'price' => 'nullable|numeric|min:0',
-            'active' => 'boolean',
-        ]);
+        $this->authorize('update', $artwork);
 
-        $artwork->update($request->only(['name', 'description', 'image_url', 'body_location', 'price', 'active']));
+        $artwork = $this->artworkService->update($artwork, $request->validated());
 
-        return response()->json($artwork);
+        return new ArtworkResource($artwork);
     }
 }

@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\RoleResource;
 use App\Models\Role;
-use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class RoleController extends Controller
 {
-    public function index()
+    /**
+     * List all available roles.
+     */
+    public function index(): AnonymousResourceCollection
     {
-        return Role::all();
+        return RoleResource::collection(Role::all());
     }
 }

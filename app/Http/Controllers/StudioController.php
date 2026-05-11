@@ -2,60 +2,83 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Studio;
+use App\Http\Requests\StoreStudioRequest;
+use App\Http\Requests\UpdateStudioRequest;
+use App\Http\Resources\StudioResource;
+use App\Services\StudioService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class StudioController extends Controller
 {
-    public function index()
+    use ApiResponse;
+
+    public function __construct(
+        private readonly StudioService $studioService
+    ) {}
+
+    /**
+     * List all studios with pagination.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return Studio::with('user')->get();
+        $studios = $this->studioService->list(
+            perPage: $request->integer('per_page', 15)
+        );
+
+        return StudioResource::collection($studios);
     }
 
-    public function show($id)
+    /**
+     * Show a single studio with its relationships.
+     */
+    public function show(int $id): StudioResource
     {
-        return Studio::with('user')->findOrFail($id);
+        $studio = $this->studioService->find($id);
+
+        return new StudioResource($studio);
     }
 
-    public function store(Request $request)
+    /**
+     * Create a new studio.
+     */
+    public function store(StoreStudioRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'nullable|string',
-            'description' => 'nullable|string',
-        ]);
+        $studio = $this->studioService->create(
+            $request->user(),
+            $request->validated()
+        );
 
-        $studio = Studio::create([
-            'user_id' => Auth::id(),
-            'name' => $request->name,
-            'address' => $request->address,
-            'description' => $request->description,
-        ]);
-
-        return response()->json($studio, 201);
+        return $this->createdResponse(new StudioResource($studio));
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Update an existing studio.
+     */
+    public function update(UpdateStudioRequest $request, int $id): StudioResource
     {
-        $studio = Studio::where('user_id', Auth::id())->findOrFail($id);
+        $studio = $this->studioService->find($id);
 
-        $request->validate([
-            'name' => 'nullable|string|max:255',
-            'address' => 'nullable|string',
-            'description' => 'nullable|string',
-        ]);
+        $this->authorize('update', $studio);
 
-        $studio->update($request->only(['name', 'address', 'description']));
+        $studio = $this->studioService->update($studio, $request->validated());
 
-        return response()->json($studio);
+        return new StudioResource($studio);
     }
 
-    public function destroy($id)
+    /**
+     * Delete a studio.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        $studio = Studio::where('user_id', Auth::id())->findOrFail($id);
-        $studio->delete();
+        $studio = $this->studioService->find($id);
 
-        return response()->json(['message' => 'Studio deleted']);
+        $this->authorize('delete', $studio);
+
+        $this->studioService->delete($studio);
+
+        return $this->noContentResponse();
     }
 }
