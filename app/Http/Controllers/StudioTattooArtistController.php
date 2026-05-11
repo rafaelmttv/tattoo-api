@@ -2,46 +2,62 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\TattooArtistResource;
+use App\Services\StudioTattooArtistService;
 use App\Models\Studio;
-use App\Models\TattooArtist;
-use App\Models\StudioTattooArtist;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class StudioTattooArtistController extends Controller
 {
-    public function index($studioId)
+    use ApiResponse;
+
+    public function __construct(
+        private readonly StudioTattooArtistService $studioTattooArtistService
+    ) {}
+
+    /**
+     * List all tattoo artists for a studio.
+     */
+    public function index(int $studioId): AnonymousResourceCollection
     {
-        $studio = Studio::findOrFail($studioId);
-        return $studio->tattooArtists()->with('user')->get();
+        $artists = $this->studioTattooArtistService->listForStudio($studioId);
+
+        return TattooArtistResource::collection($artists);
     }
 
-    public function store(Request $request, $studioId)
+    /**
+     * Associate a tattoo artist with a studio.
+     */
+    public function store(Request $request, int $studioId): JsonResponse
     {
-        $studio = Studio::where('user_id', Auth::id())->findOrFail($studioId);
+        $studio = Studio::where('user_id', $request->user()->id)->findOrFail($studioId);
 
         $request->validate([
             'tattoo_artist_id' => 'required|exists:tattoo_artists,id',
         ]);
 
-        $tattooArtist = TattooArtist::findOrFail($request->tattoo_artist_id);
+        $this->studioTattooArtistService->associate(
+            $studio,
+            $request->tattoo_artist_id
+        );
 
-        if ($studio->tattooArtists()->where('tattoo_artist_id', $tattooArtist->id)->exists()) {
-            return response()->json(['message' => 'Already associated'], 409);
-        }
-
-        $studio->tattooArtists()->attach($tattooArtist);
-
-        return response()->json(['message' => 'Associated'], 201);
+        return response()->json([
+            'message' => 'Tattoo artist associated successfully.',
+        ], 201);
     }
 
-    public function destroy($studioId, $tattooArtistId)
+    /**
+     * Disassociate a tattoo artist from a studio.
+     */
+    public function destroy(Request $request, int $studioId, int $tattooArtistId): JsonResponse
     {
-        $studio = Studio::where('user_id', Auth::id())->findOrFail($studioId);
-        $tattooArtist = TattooArtist::findOrFail($tattooArtistId);
+        $studio = Studio::where('user_id', $request->user()->id)->findOrFail($studioId);
 
-        $studio->tattooArtists()->detach($tattooArtist);
+        $this->studioTattooArtistService->disassociate($studio, $tattooArtistId);
 
-        return response()->json(['message' => 'Disassociated']);
+        return $this->noContentResponse();
     }
 }

@@ -2,57 +2,83 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TattooArtist;
+use App\Http\Requests\StoreTattooArtistRequest;
+use App\Http\Requests\UpdateTattooArtistRequest;
+use App\Http\Resources\TattooArtistResource;
+use App\Services\TattooArtistService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class TattooArtistController extends Controller
 {
-    public function index()
+    use ApiResponse;
+
+    public function __construct(
+        private readonly TattooArtistService $tattooArtistService
+    ) {}
+
+    /**
+     * List all tattoo artists with pagination.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return TattooArtist::with('user')->get();
+        $artists = $this->tattooArtistService->list(
+            perPage: $request->integer('per_page', 15)
+        );
+
+        return TattooArtistResource::collection($artists);
     }
 
-    public function show($id)
+    /**
+     * Show a single tattoo artist with relationships.
+     */
+    public function show(int $id): TattooArtistResource
     {
-        return TattooArtist::with('user')->findOrFail($id);
+        $artist = $this->tattooArtistService->find($id);
+
+        return new TattooArtistResource($artist);
     }
 
-    public function store(Request $request)
+    /**
+     * Create a new tattoo artist profile.
+     */
+    public function store(StoreTattooArtistRequest $request): JsonResponse
     {
-        $request->validate([
-            'bio' => 'nullable|string',
-            'experience_years' => 'nullable|integer|min:0',
-        ]);
+        $artist = $this->tattooArtistService->create(
+            $request->user(),
+            $request->validated()
+        );
 
-        $artist = TattooArtist::create([
-            'user_id' => Auth::id(),
-            'bio' => $request->bio,
-            'experience_years' => $request->experience_years,
-        ]);
-
-        return response()->json($artist, 201);
+        return $this->createdResponse(new TattooArtistResource($artist));
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Update an existing tattoo artist profile.
+     */
+    public function update(UpdateTattooArtistRequest $request, int $id): TattooArtistResource
     {
-        $artist = TattooArtist::where('user_id', Auth::id())->findOrFail($id);
+        $artist = $this->tattooArtistService->find($id);
 
-        $request->validate([
-            'bio' => 'nullable|string',
-            'experience_years' => 'nullable|integer|min:0',
-        ]);
+        $this->authorize('update', $artist);
 
-        $artist->update($request->only(['bio', 'experience_years']));
+        $artist = $this->tattooArtistService->update($artist, $request->validated());
 
-        return response()->json($artist);
+        return new TattooArtistResource($artist);
     }
 
-    public function destroy($id)
+    /**
+     * Delete a tattoo artist profile.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        $artist = TattooArtist::where('user_id', Auth::id())->findOrFail($id);
-        $artist->delete();
+        $artist = $this->tattooArtistService->find($id);
 
-        return response()->json(['message' => 'TattooArtist deleted']);
+        $this->authorize('delete', $artist);
+
+        $this->tattooArtistService->delete($artist);
+
+        return $this->noContentResponse();
     }
 }

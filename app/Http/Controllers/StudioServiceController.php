@@ -2,58 +2,69 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\StudioService;
+use App\Http\Requests\StoreStudioServiceRequest;
+use App\Http\Requests\UpdateStudioServiceRequest;
+use App\Http\Resources\StudioServiceResource;
+use App\Services\StudioServiceService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class StudioServiceController extends Controller
 {
-    public function index()
+    use ApiResponse;
+
+    public function __construct(
+        private readonly StudioServiceService $studioServiceService
+    ) {}
+
+    /**
+     * List active studio services with pagination.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return StudioService::with('provider.user')->where('active', true)->get();
+        $services = $this->studioServiceService->list(
+            perPage: $request->integer('per_page', 15)
+        );
+
+        return StudioServiceResource::collection($services);
     }
 
-    public function show($id)
+    /**
+     * Show a single studio service.
+     */
+    public function show(int $id): StudioServiceResource
     {
-        return StudioService::with('provider.user')->findOrFail($id);
+        $service = $this->studioServiceService->find($id);
+
+        return new StudioServiceResource($service);
     }
 
-    public function store(Request $request)
+    /**
+     * Create a new studio service.
+     */
+    public function store(StoreStudioServiceRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'duration' => 'nullable|integer|min:0',
-            'active' => 'boolean',
-        ]);
+        $service = $this->studioServiceService->create(
+            $request->user()->studio,
+            $request->validated()
+        );
 
-        $service = StudioService::create([
-            'provider_id' => Auth::user()->studio->id,
-            'name' => $request->name,
-            'description' => $request->description,
-            'price' => $request->price,
-            'duration' => $request->duration,
-            'active' => $request->active ?? true,
-        ]);
-
-        return response()->json($service, 201);
+        return $this->createdResponse(new StudioServiceResource($service));
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Update an existing studio service.
+     */
+    public function update(UpdateStudioServiceRequest $request, int $id): StudioServiceResource
     {
-        $service = StudioService::where('provider_id', Auth::user()->studio->id)->findOrFail($id);
+        $service = $this->studioServiceService->find($id);
 
-        $request->validate([
-            'name' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'sometimes|required|numeric|min:0',
-            'duration' => 'nullable|integer|min:0',
-            'active' => 'boolean',
-        ]);
+        $this->authorize('update', $service);
 
-        $service->update($request->only(['name', 'description', 'price', 'duration', 'active']));
+        $service = $this->studioServiceService->update($service, $request->validated());
 
-        return response()->json($service);
+        return new StudioServiceResource($service);
     }
 }

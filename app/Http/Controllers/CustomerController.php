@@ -2,54 +2,83 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
+use App\Http\Requests\StoreCustomerRequest;
+use App\Http\Requests\UpdateCustomerRequest;
+use App\Http\Resources\CustomerResource;
+use App\Services\CustomerService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CustomerController extends Controller
 {
-    public function index()
+    use ApiResponse;
+
+    public function __construct(
+        private readonly CustomerService $customerService
+    ) {}
+
+    /**
+     * List all customers with pagination.
+     */
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return Customer::with('user')->get();
+        $customers = $this->customerService->list(
+            perPage: $request->integer('per_page', 15)
+        );
+
+        return CustomerResource::collection($customers);
     }
 
-    public function show($id)
+    /**
+     * Show a single customer.
+     */
+    public function show(int $id): CustomerResource
     {
-        return Customer::with('user')->findOrFail($id);
+        $customer = $this->customerService->find($id);
+
+        return new CustomerResource($customer);
     }
 
-    public function store(Request $request)
+    /**
+     * Create a new customer profile.
+     */
+    public function store(StoreCustomerRequest $request): JsonResponse
     {
-        $request->validate([
-            'birth_date' => 'nullable|date',
-        ]);
+        $customer = $this->customerService->create(
+            $request->user(),
+            $request->validated()
+        );
 
-        $customer = Customer::create([
-            'user_id' => Auth::id(),
-            'birth_date' => $request->birth_date,
-        ]);
-
-        return response()->json($customer, 201);
+        return $this->createdResponse(new CustomerResource($customer));
     }
 
-    public function update(Request $request, $id)
+    /**
+     * Update an existing customer profile.
+     */
+    public function update(UpdateCustomerRequest $request, int $id): CustomerResource
     {
-        $customer = Customer::where('user_id', Auth::id())->findOrFail($id);
+        $customer = $this->customerService->find($id);
 
-        $request->validate([
-            'birth_date' => 'nullable|date',
-        ]);
+        $this->authorize('update', $customer);
 
-        $customer->update($request->only(['birth_date']));
+        $customer = $this->customerService->update($customer, $request->validated());
 
-        return response()->json($customer);
+        return new CustomerResource($customer);
     }
 
-    public function destroy($id)
+    /**
+     * Delete a customer profile.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
     {
-        $customer = Customer::where('user_id', Auth::id())->findOrFail($id);
-        $customer->delete();
+        $customer = $this->customerService->find($id);
 
-        return response()->json(['message' => 'Customer deleted']);
+        $this->authorize('delete', $customer);
+
+        $this->customerService->delete($customer);
+
+        return $this->noContentResponse();
     }
 }

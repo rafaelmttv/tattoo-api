@@ -2,66 +2,64 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Resources\UserResource;
+use App\Services\AuthService;
+use App\Traits\ApiResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    use ApiResponse;
+
+    public function __construct(
+        private readonly AuthService $authService
+    ) {}
+
+    /**
+     * Register a new user.
+     */
+    public function register(RegisterRequest $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        $token = $user->createToken('API Token')->plainTextToken;
+        $result = $this->authService->register($request->validated());
 
         return response()->json([
-            'user' => $user,
-            'token' => $token,
+            'data' => [
+                'user' => new UserResource($result['user']),
+                'token' => $result['token'],
+            ],
+            'message' => 'User registered successfully.',
+        ], 201);
+    }
+
+    /**
+     * Login an existing user.
+     */
+    public function login(LoginRequest $request): JsonResponse
+    {
+        $result = $this->authService->login($request->validated());
+
+        return response()->json([
+            'data' => [
+                'user' => new UserResource($result['user']),
+                'token' => $result['token'],
+            ],
         ]);
     }
 
-    public function login(Request $request)
+    /**
+     * Refresh the authenticated user's token.
+     */
+    public function refresh(Request $request): JsonResponse
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
-        }
-
-        $user = Auth::user();
-        $token = $user->createToken('API Token')->plainTextToken;
+        $token = $this->authService->refreshToken($request->user());
 
         return response()->json([
-            'user' => $user,
-            'token' => $token,
-        ]);
-    }
-
-    public function refresh(Request $request)
-    {
-        $user = $request->user();
-        $user->tokens()->delete(); // Optional: delete old tokens
-        $token = $user->createToken('API Token')->plainTextToken;
-
-        return response()->json([
-            'token' => $token,
+            'data' => [
+                'token' => $token,
+            ],
         ]);
     }
 }

@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\RoleResource;
 use App\Models\User;
-use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class UserController extends Controller
 {
-    public function roles($id)
+    /**
+     * List the roles for a given user.
+     */
+    public function roles(int $id): AnonymousResourceCollection
     {
         $user = User::findOrFail($id);
-        return $user->roles;
+
+        return RoleResource::collection($user->roles);
     }
 }
